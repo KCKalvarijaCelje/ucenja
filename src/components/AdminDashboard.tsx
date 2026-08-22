@@ -623,7 +623,6 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
     try {
       const isNew = !editingTeaching.id;
       const parsedId = isNew ? `teaching_${Date.now()}` : editingTeaching.id!;
-      const docRef = doc(db, "teachings", parsedId);
 
       // Duplicate slug resolution
       let baseSlug = slugify(editingTeaching.title_sl || "t");
@@ -1057,22 +1056,24 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
           </button>
         </form>
 
-        {/* Setup and Demo Auth info box */}
-        <div id="demo-auth-box" className="border-t border-gray-50 pt-5 space-y-3">
-          <div className="p-3 bg-emerald-50/50 rounded-xl text-[11px] text-emerald-850 space-y-1 border border-emerald-100/50">
-            <p className="font-bold">🔐 Demo Editor Credentials</p>
-            <p className="font-mono">Email: admin@church.si</p>
-            <p className="font-mono">Password: church123</p>
-          </div>
+        {/* Setup and Demo Auth info box (Only visible during local development) */}
+        {import.meta.env.DEV && (
+          <div id="demo-auth-box" className="border-t border-gray-50 pt-5 space-y-3">
+            <div className="p-3 bg-emerald-50/50 rounded-xl text-[11px] text-emerald-850 space-y-1 border border-emerald-100/50">
+              <p className="font-bold">🔐 Development Mode Mock Credentials</p>
+              <p className="font-mono">Email: admin@kalvarija.si</p>
+              <p className="font-mono">Password: church123</p>
+            </div>
 
-          <button
-            id="btn-demo-bypass"
-            onClick={() => setIsDemoBypass(true)}
-            className="w-full py-2 border border-gray-200 hover:border-emerald-500 text-gray-600 hover:text-emerald-700 font-medium text-xs rounded-xl cursor-pointer transition bg-gray-50/50"
-          >
-            Bypass & Test Panel Directly (Simulated State)
-          </button>
-        </div>
+            <button
+              id="btn-demo-bypass"
+              onClick={() => setIsDemoBypass(true)}
+              className="w-full py-2 border border-gray-200 hover:border-emerald-500 text-gray-600 hover:text-emerald-700 font-medium text-xs rounded-xl cursor-pointer transition bg-gray-50/50"
+            >
+              Bypass & Test Panel Directly (Local Dev Mode Only)
+            </button>
+          </div>
+        )}
       </div>
     );
   }
