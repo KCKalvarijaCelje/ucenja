@@ -1,0 +1,6 @@
+{
+  "name": "Bilingual Church Teaching Archive",
+  "description": "A bilingual Bible teachings and sermons archive in Slovenian and English with a public archive and a protected admin import review area.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

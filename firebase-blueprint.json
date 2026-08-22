@@ -1,0 +1,149 @@
+{
+  "entities": {
+    "Teacher": {
+      "title": "Teacher",
+      "description": "A pastor or teaching elder who teaches Bible studies or sermons.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the teacher." },
+        "full_name": { "type": "string", "description": "The full name of the teacher." },
+        "slug": { "type": "string", "description": "URL-friendly slug for the teacher." },
+        "short_bio_sl": { "type": "string", "description": "Short biography in Slovenian." },
+        "short_bio_en": { "type": "string", "description": "Short biography in English." },
+        "photo_url": { "type": "string", "description": "URL to the teacher's profile photo." },
+        "active": { "type": "boolean", "description": "Whether the teacher is currently active." },
+        "created_at": { "type": "string", "format": "date-time", "description": "ISO timestamp when the teacher record was created." }
+      },
+      "required": ["id", "full_name", "slug", "active"]
+    },
+    "Teaching": {
+      "title": "Teaching",
+      "description": "A sermon, Bible study, or teaching resource recorded in the archive.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID of the teaching record." },
+        "title_sl": { "type": "string", "description": "Title in Slovenian." },
+        "title_en": { "type": "string", "description": "Title in English." },
+        "slug": { "type": "string", "description": "URL-friendly slug." },
+        "teaching_date": { "type": "string", "format": "date", "description": "Date of the sermon/teaching." },
+        "teacher_id": { "type": "string", "description": "ID of the associated teacher." },
+        "series_name_sl": { "type": "string", "description": "Series name in Slovenian." },
+        "series_name_en": { "type": "string", "description": "Series name in English." },
+        "summary_sl": { "type": "string", "description": "Summary of teaching in Slovenian." },
+        "summary_en": { "type": "string", "description": "Summary of teaching in English." },
+        "notes_sl": { "type": "string", "description": "Detailed notes in Slovenian." },
+        "notes_en": { "type": "string", "description": "Detailed notes in English." },
+        "transcript_sl": { "type": "string", "description": "Transcript in Slovenian." },
+        "transcript_en": { "type": "string", "description": "Transcript in English." },
+        "bible_book_code": { "type": "string", "description": "Code of the main Bible book (e.g. ROM)." },
+        "chapter_start": { "type": "integer", "description": "Starting chapter." },
+        "chapter_end": { "type": "integer", "description": "Ending chapter." },
+        "verse_start": { "type": "integer", "description": "Starting verse." },
+        "verse_end": { "type": "integer", "description": "Ending verse." },
+        "media_type": { "type": "string", "enum": ["audio", "video", "audio_video"], "description": "The media formats available." },
+        "youtube_url": { "type": "string", "description": "Full YouTube URL." },
+        "youtube_video_id": { "type": "string", "description": "YouTube Video Watch ID." },
+        "audio_url": { "type": "string", "description": "Audio hosting URL." },
+        "google_drive_file_id": { "type": "string", "description": "Google Drive File ID." },
+        "duration_text": { "type": "string", "description": "Human-readable media duration." },
+        "thumbnail_url": { "type": "string", "description": "Preview thumbnail image URL." },
+        "published": { "type": "boolean", "description": "Whether the teaching is publicly visible." },
+        "featured": { "type": "boolean", "description": "Whether the teaching is shown on home spotlights." },
+        "created_at": { "type": "string", "format": "date-time", "description": "Timestamp when the record was created." },
+        "updated_at": { "type": "string", "format": "date-time", "description": "Timestamp when the record was last updated." }
+      },
+      "required": ["id", "title_sl", "title_en", "slug", "teaching_date", "teacher_id", "media_type", "published"]
+    },
+    "AdminSettings": {
+      "title": "AdminSettings",
+      "description": "Global sync and import settings for the administrator console.",
+      "type": "object",
+      "properties": {
+        "google_drive_folder_id": { "type": "string", "description": "Google Drive sync folder." },
+        "youtube_playlist_id": { "type": "string", "description": "YouTube playlist sync ID." },
+        "sync_interval_days": { "type": "integer", "description": "Interval between syncs in days." },
+        "auto_suggest_matching": { "type": "boolean", "description": "Whether to auto-suggest matches." }
+      },
+      "required": ["google_drive_folder_id", "youtube_playlist_id", "sync_interval_days", "auto_suggest_matching"]
+    },
+    "ImportedMediaItem": {
+      "title": "ImportedMediaItem",
+      "description": "An media resource found through scraping or Google Drive sync pending review.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier." },
+        "source": { "type": "string", "enum": ["google_drive", "youtube"], "description": "Source platform of the media." },
+        "title": { "type": "string", "description": "Parsed raw title." },
+        "media_url": { "type": "string", "description": "Direct URL to source file." },
+        "file_id_or_video_id": { "type": "string", "description": "Original platforms' file/video payload identification." },
+        "thumbnail_url": { "type": "string", "description": "Optional picture/video thumbnail preview." },
+        "imported_at": { "type": "string", "format": "date-time", "description": "ISO timestamp when mapped." },
+        "file_created_at": { "type": "string", "format": "date-time", "description": "ISO timestamp from Google/YouTube data structure." }
+      },
+      "required": ["id", "source", "title", "media_url", "file_id_or_video_id", "imported_at"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Information about an authorized admin user.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "The email of the admin." },
+        "role": { "type": "string", "description": "The role of the admin, e.g. super_admin." },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    },
+    "ImportItem": {
+      "title": "ImportItem",
+      "description": "A media item detected and waiting in the imports queue.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title_sl": { "type": "string" },
+        "title_en": { "type": "string" },
+        "teacher_id": { "type": "string" },
+        "bible_book_code": { "type": "string" },
+        "chapter_start": { "type": "integer" },
+        "verse_start": { "type": "integer" },
+        "verse_end": { "type": "integer" },
+        "media_type": { "type": "string", "enum": ["audio", "video"] },
+        "audio_url": { "type": "string" },
+        "youtube_url": { "type": "string" },
+        "source": { "type": "string", "enum": ["google_drive", "youtube"] },
+        "status": { "type": "string", "enum": ["unreviewed", "linked", "new_teaching_created", "ignored"] },
+        "confidence_score": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "teaching_id": { "type": "string" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title_sl", "media_type", "source", "status", "confidence_score", "created_at"]
+    }
+  },
+  "firestore": {
+    "teachers/{teacherId}": {
+      "schema": "Teacher",
+      "description": "Collection of teachers."
+    },
+    "teachings/{teachingId}": {
+      "schema": "Teaching",
+      "description": "Collection of Bible teachings and sermons."
+    },
+    "settings/global": {
+      "schema": "AdminSettings",
+      "description": "Global config values for administrative sync actions."
+    },
+    "pending_imports/{importId}": {
+      "schema": "ImportedMediaItem",
+      "description": "Temporary stream queue of detected files pending import/attachment."
+    },
+    "import_items/{importId}": {
+      "schema": "ImportItem",
+      "description": "Items in the imports queue."
+    },
+    "admin_users/{email}": {
+      "schema": "AdminUser",
+      "description": "A database of authorized administrator emails."
+    }
+  }
+}
