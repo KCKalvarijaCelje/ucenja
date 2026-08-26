@@ -1,7 +1,27 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import fs from 'fs';
+import { defineConfig } from 'vite';
+
+// Sync logo assets from kck if available
+try {
+  const masterLogo = path.resolve(__dirname, '../kck/public/KCK-logo-rdec_small.png');
+  const masterSecondary = path.resolve(__dirname, '../kck/public/KCK-logo-rdec-sekundaren_small.png');
+  const targetDir = path.resolve(__dirname, 'public');
+
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
+  if (fs.existsSync(masterLogo)) {
+    fs.copyFileSync(masterLogo, path.join(targetDir, 'KCK-logo-rdec_small.png'));
+  }
+  if (fs.existsSync(masterSecondary)) {
+    fs.copyFileSync(masterSecondary, path.join(targetDir, 'KCK-logo-rdec-sekundaren_small.png'));
+  }
+} catch (e) {
+  // ignore
+}
 
 export default defineConfig(() => {
   return {
@@ -12,10 +32,7 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };

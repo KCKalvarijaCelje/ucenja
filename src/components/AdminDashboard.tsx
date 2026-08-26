@@ -8,13 +8,15 @@ import {
   ShieldAlert, LayoutDashboard, FileText, Users, RefreshCw, X, 
   Settings, LogOut, Plus, Edit2, Trash2, CheckCircle, 
   AlertCircle, Eye, EyeOff, Save, Trash, HelpCircle, 
-  FileCheck, ArrowRight, Video, Volume2, Link2, Sparkles 
+  FileCheck, ArrowRight, Video, Volume2, Link2, Sparkles,
+  Mail, Send
 } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import type { User } from "@supabase/supabase-js";
 import { Teacher, Teaching, AdminSettings, ImportedMediaItem, MatchSuggestion, BIBLE_BOOKS, BIBLE_BOOKS_MAP, ImportItem } from "../types";
 import { TRANSLATIONS } from "../translations";
 import { slugify, computeSuggestedMatches, parseMediaTitle } from "../utils";
+import { sendResendEmail, buildNewTeachingEmailHtml } from "../services/emailService";
 
 interface AdminDashboardProps {
   currentLang: 'sl' | 'en';
@@ -83,6 +85,87 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
   const [linkingItem, setLinkingItem] = useState<ImportItem | null>(null);
   const [linkTargetTeachingId, setLinkTargetTeachingId] = useState("");
   const [linkSearchQuery, setLinkSearchQuery] = useState("");
+
+  // Email Broadcast State
+  const [broadcastTeaching, setBroadcastTeaching] = useState<Teaching | null>(null);
+  const [broadcastRecipientMode, setBroadcastRecipientMode] = useState<'all' | 'custom'>('all');
+  const [broadcastCustomEmail, setBroadcastCustomEmail] = useState('');
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
+  const [broadcastStatus, setBroadcastStatus] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleSendTeachingBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastTeaching) return;
+
+    setIsSendingBroadcast(true);
+    setBroadcastStatus(null);
+
+    const teacher = teachers.find(tc => tc.id === broadcastTeaching.teacher_id);
+    const teacherName = teacher?.full_name || 'KC Kalvarija';
+    const listenUrl = `https://kalvarija.si/ucenja#/${broadcastTeaching.slug || broadcastTeaching.id}`;
+
+    let recipients: string[] = [];
+    if (broadcastRecipientMode === 'custom') {
+      recipients = broadcastCustomEmail.split(',').map(em => em.trim()).filter(em => em && em.includes('@'));
+    } else {
+      // Pull registered members from supabase profiles
+      try {
+        const { data: profs } = await supabase.from('profiles').select('email');
+        if (profs && profs.length > 0) {
+          recipients = profs.map((p: any) => p.email).filter((em: any) => em && em.includes('@'));
+        }
+      } catch (err) {
+        console.warn('Could not load profiles for broadcast:', err);
+      }
+      if (recipients.length === 0) {
+        recipients = ['info@kalvarija.si'];
+      }
+    }
+
+    if (recipients.length === 0) {
+      alert('Ni veljavnih prejemnikov.');
+      setIsSendingBroadcast(false);
+      return;
+    }
+
+    const html = buildNewTeachingEmailHtml({
+      title: broadcastTeaching.title_sl || broadcastTeaching.title_en || 'Novo učenje',
+      teacherName,
+      dateStr: broadcastTeaching.teaching_date,
+      biblePassage: broadcastTeaching.bible_book_code ? `${broadcastTeaching.bible_book_code} ${broadcastTeaching.chapter_start || ''}` : undefined,
+      description: broadcastTeaching.description_sl || broadcastTeaching.description_en,
+      listenUrl,
+      audioUrl: broadcastTeaching.audio_url,
+      videoUrl: broadcastTeaching.youtube_url,
+    });
+
+    try {
+      const res = await sendResendEmail({
+        to: recipients,
+        subject: `📖 Novo učenje: ${broadcastTeaching.title_sl || 'Nagovor'} (${teacherName}) • KC Kalvarija`,
+        html,
+      });
+
+      if (res.success) {
+        setBroadcastStatus({
+          success: true,
+          message: `✓ Obvestilo uspešno poslano ${recipients.length} prejemnikom preko Resend (@kalvarija.si)!`,
+        });
+      } else {
+        setBroadcastStatus({
+          success: false,
+          message: `Napaka pri pošiljanju: ${res.error || 'Neznana napaka'}`,
+        });
+      }
+    } catch (err: any) {
+      setBroadcastStatus({
+        success: false,
+        message: `Napaka: ${err.message}`,
+      });
+    } finally {
+      setIsSendingBroadcast(false);
+    }
+  };
 
   // Synchronize activeTab based on location hash
   useEffect(() => {
@@ -1302,6 +1385,18 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
                         </td>
                         <td className="p-4 text-right flex justify-end gap-1.5 items-center">
                           <button
+                            type="button"
+                            onClick={() => {
+                              setBroadcastTeaching(item);
+                              setBroadcastStatus(null);
+                            }}
+                            className="p-1.5 border border-rose-200 hover:border-[#93032E] hover:bg-rose-50 text-[#93032E] rounded-lg cursor-pointer flex items-center gap-1 text-[11px] font-bold transition"
+                            title="Pošlji e-poštno obvestilo o učenju članom cerkve"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Obvesti</span>
+                          </button>
+                          <button
                             id={`edit-teach-btn-${item.id}`}
                             onClick={() => handleEditTeachingTrigger(item)}
                             className="p-1.5 border border-gray-200 hover:border-emerald-600 hover:bg-emerald-50 text-gray-500 hover:text-emerald-700 rounded-lg cursor-pointer"
@@ -2377,6 +2472,111 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
           </div>
         )}
       </div>
+
+      {/* Broadcast Email Modal */}
+      {broadcastTeaching && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-5 border border-gray-100">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2 text-gray-900 font-bold text-base">
+                <Mail className="w-5 h-5 text-[#93032E]" />
+                <span>Obvesti člane o novem učenju</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBroadcastTeaching(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-100 space-y-1 text-xs">
+              <div className="font-bold text-gray-900 text-sm">{broadcastTeaching.title_sl || broadcastTeaching.title_en}</div>
+              <div className="text-gray-600">
+                Govornik: <strong>{teachers.find(tc => tc.id === broadcastTeaching.teacher_id)?.full_name || 'KC Kalvarija'}</strong>
+                {broadcastTeaching.teaching_date && <span> • Datum: <strong>{broadcastTeaching.teaching_date}</strong></span>}
+              </div>
+            </div>
+
+            <form onSubmit={handleSendTeachingBroadcast} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                  Ciljna skupina prejemnikov
+                </label>
+                <select
+                  value={broadcastRecipientMode}
+                  onChange={(e) => setBroadcastRecipientMode(e.target.value as any)}
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#93032E] focus:outline-none bg-white font-medium"
+                >
+                  <option value="all">👥 Vsi registrirani člani in obiskovalci cerkve</option>
+                  <option value="custom">✉️ Posamezen e-poštni naslov (Test)</option>
+                </select>
+              </div>
+
+              {broadcastRecipientMode === 'custom' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                    Vnesite e-poštni naslov *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={broadcastCustomEmail}
+                    onChange={(e) => setBroadcastCustomEmail(e.target.value)}
+                    placeholder="npr. pastor@kalvarija.si, test@gmail.com"
+                    className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#93032E] focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {broadcastStatus && (
+                <div
+                  className={`p-3.5 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                    broadcastStatus.success
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-rose-50 text-rose-800 border border-rose-200'
+                  }`}
+                >
+                  {broadcastStatus.success ? (
+                    <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  )}
+                  <span>{broadcastStatus.message}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setBroadcastTeaching(null)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 cursor-pointer"
+                >
+                  Zapri
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingBroadcast}
+                  className="px-5 py-2.5 rounded-xl bg-[#93032E] hover:bg-[#7a0225] disabled:opacity-50 text-white text-xs font-bold shadow-md flex items-center gap-1.5 cursor-pointer transition active:scale-95"
+                >
+                  {isSendingBroadcast ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Pošiljanje...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Pošlji obvestilo preko Resend</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ArrowLeft, Volume2, Video, Calendar, User, Book, BookOpen, Clock, AlertTriangle } from "lucide-react";
 import { TRANSLATIONS } from "../translations";
 import { Teacher, Teaching, BIBLE_BOOKS_MAP } from "../types";
+import { getAudioUrl, getMediaUrl } from "../lib/cdn";
 
 interface PublicDetailProps {
   currentLang: 'sl' | 'en';
@@ -101,7 +102,7 @@ export function PublicDetail({ currentLang, teachingId, teachers, teachings, onN
           ) : teaching.thumbnail_url ? (
             <div className="w-full aspect-[16/10] rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
               <img 
-                src={teaching.thumbnail_url} 
+                src={getMediaUrl(teaching.thumbnail_url)} 
                 alt={displayTitle} 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
@@ -122,7 +123,7 @@ export function PublicDetail({ currentLang, teachingId, teachers, teachings, onN
               <audio
                 id="html5-audio-element"
                 controls
-                src={teaching.audio_url}
+                src={getAudioUrl(teaching.audio_url)}
                 className="w-full accent-emerald-600"
               />
             </div>

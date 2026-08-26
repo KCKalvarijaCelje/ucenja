@@ -1,0 +1,23 @@
+{
+  "short_name": "KCK Učenja",
+  "name": "KCK Arhiv Učenj in Pridig",
+  "description": "Zvočni in video posnetki pridig ter učenja Krščanske cerkve Kalvarija Celje",
+  "icons": [
+    {
+      "src": "/logo-icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512 any"
+    },
+    {
+      "src": "/KCK-logo-rdec_small.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#064e3b",
+  "theme_color": "#047857",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "sl"
+}

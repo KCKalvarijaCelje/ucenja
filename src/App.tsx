@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { BookOpen } from "lucide-react";
-import { supabase } from "./supabaseClient";
+import { supabase, getAuthBroadcastChannel, broadcastAuthChange, performGlobalSignOut } from "./supabaseClient";
 import { Teacher, Teaching } from "./types";
 import { TRANSLATIONS } from "./translations";
 import { Header } from "./components/Header";
@@ -14,6 +14,8 @@ import { PublicArchive } from "./components/PublicArchive";
 import { PublicDetail } from "./components/PublicDetail";
 import { PublicTeachers } from "./components/PublicTeachers";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { MobileBottomNav } from "./components/MobileBottomNav";
+import { PwaInstallBanner } from "./components/PwaInstallBanner";
 
 export default function App() {
   // Locale / Translation configuration
@@ -33,6 +35,116 @@ export default function App() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [teachings, setTeachings] = useState<Teaching[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<{ name: string; email: string; role?: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem('kck_user_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { name: parsed.name || 'Aleš', email: parsed.email || '', role: 'Admin' };
+      }
+    } catch {}
+    return null;
+  });
+
+  // Format display name with proper Slovenian diacritics (Š, Č, Ž)
+  const formatSlovenianDisplayName = (rawName?: string | null, email?: string | null): string => {
+    const emailLower = (email || '').toLowerCase().trim();
+    let name = (rawName || '').trim();
+
+    if (
+      emailLower.includes('ales.lajlar') ||
+      emailLower.includes('aleslajlar') ||
+      emailLower.startsWith('ales') ||
+      name.toLowerCase().includes('ales')
+    ) {
+      return 'Aleš Lajlar';
+    }
+
+    if (!name && email) {
+      name = email.split('@')[0];
+    }
+
+    if (!name) return 'Aleš Lajlar';
+
+    return name
+      .replace(/\bAles\b/g, 'Aleš')
+      .replace(/\bales\b/g, 'Aleš')
+      .replace(/\bStefan\b/g, 'Štefan')
+      .replace(/\bStef\b/g, 'Štef')
+      .replace(/\bSpela\b/g, 'Špela')
+      .replace(/\bBostjan\b/g, 'Boštjan')
+      .replace(/\bBozena\b/g, 'Božena')
+      .replace(/\bZiga\b/g, 'Žiga')
+      .replace(/\bZan\b/g, 'Žan')
+      .replace(/\bCrt\b/g, 'Črt')
+      .replace(/\bMatjaz\b/g, 'Matjaž')
+      .replace(/\bMarusa\b/g, 'Maruša')
+      .replace(/\bAljosa\b/g, 'Aljoša')
+      .replace(/\bAnze\b/g, 'Anže')
+      .replace(/\bSasa\b/g, 'Saša')
+      .replace(/\bBlaz\b/g, 'Blaž');
+  };
+
+  useEffect(() => {
+    const syncUserSession = (sessionUser: any) => {
+      if (sessionUser) {
+        const email = sessionUser.email || '';
+        setUser({
+          name: formatSlovenianDisplayName(sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name, email),
+          email: email,
+          role: 'Admin',
+        });
+      } else {
+        setUser(null);
+      }
+    };
+
+    // 1. Initial getSession check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      syncUserSession(session?.user ?? null);
+    }).catch(() => {});
+
+    // 2. Auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      syncUserSession(session?.user ?? null);
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        broadcastAuthChange('GLOBAL_SIGNIN');
+      } else if (event === 'SIGNED_OUT') {
+        broadcastAuthChange('GLOBAL_SIGNOUT');
+      }
+    });
+
+    // 3. BroadcastChannel listener for instant cross-app sync
+    const channel = getAuthBroadcastChannel();
+    if (channel) {
+      channel.onmessage = (e) => {
+        if (e.data?.type === 'GLOBAL_SIGNOUT') {
+          syncUserSession(null);
+        } else if (e.data?.type === 'GLOBAL_SIGNIN') {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            syncUserSession(session?.user ?? null);
+          });
+        }
+      };
+    }
+
+    // 4. Tab focus & visibility sync
+    const handleTabFocus = () => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        syncUserSession(session?.user ?? null);
+      }).catch(() => {});
+    };
+
+    window.addEventListener('focus', handleTabFocus);
+    document.addEventListener('visibilitychange', handleTabFocus);
+
+    return () => {
+      subscription.unsubscribe();
+      if (channel) channel.close();
+      window.removeEventListener('focus', handleTabFocus);
+      document.removeEventListener('visibilitychange', handleTabFocus);
+    };
+  }, []);
 
   // Hash-based Clean routing structure
   const [routerState, setRouterState] = useState<{ view: string; params: any }>({
@@ -193,7 +305,7 @@ export default function App() {
   };
 
   return (
-    <div id="app-root-container" className="min-h-screen bg-neutral-50/40 text-gray-800 flex flex-col justify-between selection:bg-emerald-100 selection:text-emerald-900">
+    <div id="app-root-container" className="min-h-screen bg-[#FAF7F5] text-gray-800 flex flex-col justify-between selection:bg-[#93032E] selection:text-white">
       
       {/* 1. Global Navigation Bar */}
       <Header
@@ -202,10 +314,17 @@ export default function App() {
         currentLang={currentLang}
         onLangChange={handleLangChange}
         isAdminLoggedIn={routerState.view === 'admin'}
+        user={user}
+        onLogin={() => handleNavigate('admin')}
+        onLogout={() => {
+          supabase.auth.signOut();
+          setUser(null);
+          localStorage.removeItem('kck_user_session');
+        }}
       />
 
       {/* 2. Main Page Content Section */}
-      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex-1 py-8 w-full">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex-1 py-8 pb-24 md:pb-8 w-full">
         {loading ? (
           <div id="loader-overlay" className="flex flex-col items-center justify-center py-32 space-y-4">
             <div className="w-10 h-10 border-2 border-emerald-650 border-t-transparent animate-spin rounded-full" />
@@ -267,13 +386,25 @@ export default function App() {
                 teachers={teachers}
                 teachings={teachings}
                 onRefreshData={handleReloadData}
+                onNavigate={handleNavigate}
               />
             )}
           </div>
         )}
       </main>
 
-      {/* 3. Global Information Footer */}
+      {/* 3. Mobile Native Bottom Navigation Bar */}
+      <MobileBottomNav
+        currentView={routerState.view}
+        onNavigate={handleNavigate}
+        currentLang={currentLang}
+        isAdminLoggedIn={routerState.view === 'admin'}
+      />
+
+      {/* Mobile/Desktop PWA Install Banner */}
+      <PwaInstallBanner currentLang={currentLang} />
+
+      {/* 4. Global Information Footer */}
       <footer id="global-footer" className="bg-white border-t border-gray-150/80 py-8 text-xs text-gray-500 font-sans mt-16 shadow-inner text-center">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
