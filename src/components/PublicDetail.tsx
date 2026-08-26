@@ -111,7 +111,7 @@ export function PublicDetail({ currentLang, teachingId, teachers, teachings, onN
           ) : null}
 
           {/* Audio Player Row */}
-          {(teaching.media_type === 'audio' || teaching.media_type === 'audio_video') && teaching.audio_url && (
+          {(teaching.media_type === 'audio' || teaching.media_type === 'audio_video') && (teaching.audio_url || teaching.audio_path) && (
             <div id="audio-stream-box" className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl space-y-2.5">
               <div className="flex items-center justify-between text-xs text-emerald-800 font-medium">
                 <span className="flex items-center gap-1.5">
@@ -123,7 +123,7 @@ export function PublicDetail({ currentLang, teachingId, teachers, teachings, onN
               <audio
                 id="html5-audio-element"
                 controls
-                src={getAudioUrl(teaching.audio_url)}
+                src={getAudioUrl(teaching.audio_path || teaching.audio_url)}
                 className="w-full accent-emerald-600"
               />
             </div>

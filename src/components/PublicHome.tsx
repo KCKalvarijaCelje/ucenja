@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { Search, Compass, BookOpen, Clock, PlayCircle, Users, ArrowRight } from "lucide-react";
 import { TRANSLATIONS } from "../translations";
 import { Teacher, Teaching, BIBLE_BOOKS, BIBLE_BOOKS_MAP } from "../types";
+import { getMediaUrl, getAudioUrl } from "../lib/cdn";
 
 interface PublicHomeProps {
   currentLang: 'sl' | 'en';
@@ -121,10 +122,10 @@ export function PublicHome({ currentLang, teachers, teachings, onNavigate }: Pub
                 className="group bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4 hover:shadow-md hover:border-emerald-100 transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div className="space-y-3">
-                  {item.thumbnail_url ? (
+                  {item.thumbnail_url || item.thumbnail_path ? (
                     <div className="w-full aspect-[16/10] rounded-xl overflow-hidden bg-gray-50 relative">
                       <img 
-                        src={item.thumbnail_url} 
+                        src={getMediaUrl(item.thumbnail_path || item.thumbnail_url)} 
                         alt={displayTitle}
                         className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
                         referrerPolicy="no-referrer"
@@ -255,7 +256,7 @@ export function PublicHome({ currentLang, teachers, teachings, onNavigate }: Pub
               >
                 <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-50 shrink-0">
                   <img 
-                    src={teacher.photo_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200"} 
+                    src={getMediaUrl(teacher.photo_path || teacher.photo_url) || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200"} 
                     alt={teacher.full_name}
                     className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-300"
                     referrerPolicy="no-referrer"

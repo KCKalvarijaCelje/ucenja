@@ -51,12 +51,7 @@ export default function App() {
     const emailLower = (email || '').toLowerCase().trim();
     let name = (rawName || '').trim();
 
-    if (
-      emailLower.includes('ales.lajlar') ||
-      emailLower.includes('aleslajlar') ||
-      emailLower.startsWith('ales') ||
-      name.toLowerCase().includes('ales')
-    ) {
+    if (emailLower === 'ales.lajlar@gmail.com' || emailLower === 'aleslajlar@gmail.com') {
       return 'Aleš Lajlar';
     }
 
@@ -64,7 +59,12 @@ export default function App() {
       name = email.split('@')[0];
     }
 
-    if (!name) return 'Aleš Lajlar';
+    if (!name) return 'Uporabnik';
+
+    // If name is dot-separated like "kenzley.lajlar" or "whitney.lajlar", format to capitalized words
+    if (name.includes('.') && !name.includes(' ')) {
+      name = name.split('.').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+    }
 
     return name
       .replace(/\bAles\b/g, 'Aleš')
@@ -86,11 +86,29 @@ export default function App() {
   };
 
   useEffect(() => {
-    const syncUserSession = (sessionUser: any) => {
+    const syncUserSession = async (sessionUser: any) => {
       if (sessionUser) {
-        const email = sessionUser.email || '';
+        const email = (sessionUser.email || '').toLowerCase().trim();
+        const metaName = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || '';
+        let displayName = metaName || email.split('@')[0];
+
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url, role')
+            .or(`email.ilike.${email},id.eq.${sessionUser.id},auth_user_id.eq.${sessionUser.id}`)
+            .maybeSingle();
+
+          if (profile?.full_name) {
+            displayName = profile.full_name;
+          }
+        } catch {
+          // ignore
+        }
+
+        const formattedName = formatSlovenianDisplayName(displayName, email);
         setUser({
-          name: formatSlovenianDisplayName(sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name, email),
+          name: formattedName,
           email: email,
           role: 'Admin',
         });

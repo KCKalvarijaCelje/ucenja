@@ -6,6 +6,7 @@
 import { Users, BookOpen, Volume2, Video, Clock } from "lucide-react";
 import { TRANSLATIONS } from "../translations";
 import { Teacher, Teaching, BIBLE_BOOKS_MAP } from "../types";
+import { getMediaUrl } from "../lib/cdn";
 
 interface PublicTeachersProps {
   currentLang: 'sl' | 'en';
@@ -51,7 +52,7 @@ export function PublicTeachers({ currentLang, teachers, teachings, selectedTeach
         <div className="flex flex-col md:flex-row gap-8 bg-white border border-gray-100 rounded-3xl p-6 shadow-sm items-center md:items-start text-center md:text-left">
           <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-emerald-100 shadow-xs shrink-0 bg-gray-50">
             <img 
-              src={teacher.photo_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200"} 
+              src={getMediaUrl(teacher.photo_path || teacher.photo_url) || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200"} 
               alt={teacher.full_name} 
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
@@ -158,7 +159,7 @@ export function PublicTeachers({ currentLang, teachers, teachings, selectedTeach
             >
               <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-50 bg-gray-50 shrink-0">
                 <img 
-                  src={teacher.photo_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200"} 
+                  src={getMediaUrl(teacher.photo_path || teacher.photo_url) || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200"} 
                   alt={teacher.full_name} 
                   className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-300"
                   referrerPolicy="no-referrer"

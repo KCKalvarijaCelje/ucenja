@@ -10,6 +10,7 @@ export interface Teacher {
   short_bio_sl: string;
   short_bio_en: string;
   photo_url: string;
+  photo_path?: string;
   active: boolean;
   created_at?: string;
 }
@@ -38,9 +39,11 @@ export interface Teaching {
   youtube_url: string;
   youtube_video_id: string;
   audio_url: string;
+  audio_path?: string;
   google_drive_file_id: string;
   duration_text: string;
   thumbnail_url: string;
+  thumbnail_path?: string;
   published: boolean;
   featured: boolean;
   created_at: string;

@@ -189,12 +189,7 @@ export const EcosystemNavbar: React.FC<EcosystemNavbarProps> = ({
     const emailLower = (email || '').toLowerCase().trim();
     let name = (rawName || '').trim();
 
-    if (
-      emailLower.includes('ales.lajlar') ||
-      emailLower.includes('aleslajlar') ||
-      emailLower.startsWith('ales') ||
-      name.toLowerCase().includes('ales')
-    ) {
+    if (emailLower === 'ales.lajlar@gmail.com' || emailLower === 'aleslajlar@gmail.com') {
       return 'Aleš Lajlar';
     }
 
@@ -202,7 +197,12 @@ export const EcosystemNavbar: React.FC<EcosystemNavbarProps> = ({
       name = email.split('@')[0];
     }
 
-    if (!name) return 'Aleš Lajlar';
+    if (!name) return 'Uporabnik';
+
+    // If name is dot-separated like "kenzley.lajlar" or "whitney.lajlar", format to capitalized words
+    if (name.includes('.') && !name.includes(' ')) {
+      name = name.split('.').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+    }
 
     return name
       .replace(/\bAles\b/g, 'Aleš')

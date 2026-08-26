@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { 
   ShieldAlert, LayoutDashboard, FileText, Users, RefreshCw, X, 
   Settings, LogOut, Plus, Edit2, Trash2, CheckCircle, 
   AlertCircle, Eye, EyeOff, Save, Trash, HelpCircle, 
   FileCheck, ArrowRight, Video, Volume2, Link2, Sparkles,
-  Mail, Send
+  Mail, Send, Upload, Camera, Images
 } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import type { User } from "@supabase/supabase-js";
@@ -17,6 +17,8 @@ import { Teacher, Teaching, AdminSettings, ImportedMediaItem, MatchSuggestion, B
 import { TRANSLATIONS } from "../translations";
 import { slugify, computeSuggestedMatches, parseMediaTitle } from "../utils";
 import { sendResendEmail, buildNewTeachingEmailHtml } from "../services/emailService";
+import { getAudioUrl, getMediaUrl } from "../lib/cdn";
+import { optimizeImageToDataUrl, optimizeImageFile, createCleanStoragePath } from "../lib/imageOptimizer";
 
 interface AdminDashboardProps {
   currentLang: 'sl' | 'en';
@@ -1736,13 +1738,36 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
                 )}
 
                 <div className="space-y-1 col-span-1 sm:col-span-2">
-                  <label className="text-xs font-semibold text-gray-750">{t.form_thumbnail_url}</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-gray-750">{t.form_thumbnail_url}</label>
+                    <label className="text-[11px] text-emerald-700 font-bold hover:underline cursor-pointer flex items-center gap-1">
+                      <Upload className="w-3 h-3" />
+                      <span>{currentLang === 'sl' ? "Naloži naslovnico (.webp <400KB)" : "Upload Cover (.webp <400KB)"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const optimized = await optimizeImageToDataUrl(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1920, mimeType: 'image/webp' });
+                            const cleanPath = createCleanStoragePath('sermons', file.name, 'webp');
+                            setEditingTeaching({ ...editingTeaching, thumbnail_url: optimized, thumbnail_path: cleanPath });
+                            setTeachingFormHasChanges(true);
+                          } catch (err) {
+                            console.error('Image compression error:', err);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                   <input
                     id="teaching-thumbnail"
                     type="text"
-                    placeholder="https://images.unsplash.com/... or Auto-YouTube Thumbnail"
-                    value={editingTeaching.thumbnail_url || ""}
-                    onChange={(e) => { setEditingTeaching({ ...editingTeaching, thumbnail_url: e.target.value }); setTeachingFormHasChanges(true); }}
+                    placeholder="https://images.unsplash.com/... ali /sermons/naslovnica.webp"
+                    value={editingTeaching.thumbnail_path || editingTeaching.thumbnail_url || ""}
+                    onChange={(e) => { setEditingTeaching({ ...editingTeaching, thumbnail_url: e.target.value, thumbnail_path: e.target.value }); setTeachingFormHasChanges(true); }}
                     className="w-full text-xs p-2.5 bg-gray-50/50 border border-gray-200 rounded-xl"
                   />
                 </div>
@@ -2027,13 +2052,36 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-gray-750">{t.form_photo_url}</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-gray-750">{t.form_photo_url}</label>
+                    <label className="text-[11px] text-emerald-700 font-bold hover:underline cursor-pointer flex items-center gap-1">
+                      <Upload className="w-3 h-3" />
+                      <span>{currentLang === 'sl' ? "Naloži sliko (.webp <400KB)" : "Upload Photo (.webp <400KB)"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const optimized = await optimizeImageToDataUrl(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1920, mimeType: 'image/webp' });
+                            const cleanPath = createCleanStoragePath('teachers', file.name, 'webp');
+                            setEditingTeacher({ ...editingTeacher, photo_url: optimized, photo_path: cleanPath });
+                            setTeacherFormHasChanges(true);
+                          } catch (err) {
+                            console.error('Image compression error:', err);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                   <input
                     id="teacher-photourl"
                     type="text"
-                    placeholder="https://images.unsplash.com/photo-..."
-                    value={editingTeacher.photo_url || ""}
-                    onChange={(e) => { setEditingTeacher({ ...editingTeacher, photo_url: e.target.value }); setTeacherFormHasChanges(true); }}
+                    placeholder="https://images.unsplash.com/... ali /teachers/ime.webp"
+                    value={editingTeacher.photo_path || editingTeacher.photo_url || ""}
+                    onChange={(e) => { setEditingTeacher({ ...editingTeacher, photo_url: e.target.value, photo_path: e.target.value }); setTeacherFormHasChanges(true); }}
                     className="w-full text-xs p-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none"
                   />
                 </div>
