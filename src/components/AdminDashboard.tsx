@@ -112,7 +112,11 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
     } else {
       // Pull registered members from supabase profiles
       try {
-        const { data: profs } = await supabase.from('profiles').select('email');
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('email')
+          .not('email', 'is', null)
+          .limit(300);
         if (profs && profs.length > 0) {
           recipients = profs.map((p: any) => p.email).filter((em: any) => em && em.includes('@'));
         }
@@ -273,8 +277,9 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
       const fetchImportItems = async () => {
         const { data } = await supabase
           .from("import_items")
-          .select("*")
-          .order("created_at", { ascending: false });
+          .select("id, title_sl, title_en, teacher_id, bible_book_code, chapter_start, verse_start, verse_end, media_type, audio_url, youtube_url, source, status, confidence_score, created_at")
+          .order("created_at", { ascending: false })
+          .limit(50);
         if (data) {
           setImportItems(data as ImportItem[]);
         }
@@ -334,7 +339,7 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
     try {
       const { data } = await supabase
         .from("admin_settings")
-        .select("*")
+        .select("google_drive_folder_id, youtube_playlist_id, sync_interval_days, auto_suggest_matching")
         .eq("id", "global")
         .maybeSingle();
       if (data) {
@@ -349,8 +354,9 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
     try {
       const { data } = await supabase
         .from("pending_imports")
-        .select("*")
-        .order("imported_at", { ascending: false });
+        .select("id, source, title, media_url, file_id_or_video_id, thumbnail_url, duration_text, imported_at, file_created_at, parsed_title, parsed_teacher_name, parsed_bible_book, parsed_chapter")
+        .order("imported_at", { ascending: false })
+        .limit(50);
       if (data) {
         setPendingImports(data as ImportedMediaItem[]);
       }

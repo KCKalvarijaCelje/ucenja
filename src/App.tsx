@@ -176,8 +176,9 @@ export default function App() {
       // 1. Fetch teachers
       const { data: trData, error: trErr } = await supabase
         .from('teachers')
-        .select('*')
-        .order('full_name', { ascending: true });
+        .select('id, full_name, slug, short_bio_sl, short_bio_en, photo_url, photo_path, active')
+        .order('full_name', { ascending: true })
+        .limit(50);
       
       if (trErr) {
         console.error("Error fetching teachers from Supabase:", trErr);
@@ -185,11 +186,12 @@ export default function App() {
         setTeachers(trData as Teacher[]);
       }
 
-      // 2. Fetch teachings ordered by teaching date desc
+      // 2. Fetch teachings ordered by teaching date desc (omit heavy transcripts/notes from catalog list to prevent egress spikes)
       const { data: teData, error: teErr } = await supabase
         .from('teachings')
-        .select('*')
-        .order('teaching_date', { ascending: false });
+        .select('id, title_sl, title_en, slug, teaching_date, teacher_id, series_name_sl, series_name_en, summary_sl, summary_en, bible_book_code, chapter_start, chapter_end, verse_start, verse_end, media_type, youtube_url, youtube_video_id, audio_url, audio_path, google_drive_file_id, duration_text, thumbnail_url, thumbnail_path, published, featured, created_at, updated_at')
+        .order('teaching_date', { ascending: false })
+        .limit(100);
       
       if (teErr) {
         console.error("Error fetching teachings from Supabase:", teErr);

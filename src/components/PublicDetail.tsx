@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from "react";
-import { ArrowLeft, Volume2, Video, Calendar, User, Book, BookOpen, Clock, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Volume2, Video, Calendar, User, Book, BookOpen, Clock, AlertTriangle, Loader2 } from "lucide-react";
 import { TRANSLATIONS } from "../translations";
 import { Teacher, Teaching, BIBLE_BOOKS_MAP } from "../types";
 import { getAudioUrl, getMediaUrl } from "../lib/cdn";
+import { supabase } from "../supabaseClient";
 
 interface PublicDetailProps {
   currentLang: 'sl' | 'en';
@@ -20,13 +21,70 @@ interface PublicDetailProps {
 export function PublicDetail({ currentLang, teachingId, teachers, teachings, onNavigate }: PublicDetailProps) {
   const t = TRANSLATIONS[currentLang];
   const [activeTab, setActiveTab] = useState<'summary' | 'notes' | 'transcript'>('summary');
+  const [detailData, setDetailData] = useState<{
+    notes_sl?: string;
+    notes_en?: string;
+    transcript_sl?: string;
+    transcript_en?: string;
+  } | null>(null);
+  const [singleTeaching, setSingleTeaching] = useState<Teaching | null>(null);
+  const [loadingSingle, setLoadingSingle] = useState(false);
 
-  // Find the current teaching
-  const teaching = teachings.find(item => item.id === teachingId);
+  // Find the current teaching from props or loaded single record
+  const baseTeaching = teachings.find(item => item.id === teachingId);
+  const teaching = baseTeaching || singleTeaching;
+
+  // If teaching is not in initial list, fetch its full meta
+  useEffect(() => {
+    if (!baseTeaching && teachingId) {
+      let alive = true;
+      setLoadingSingle(true);
+      supabase
+        .from('teachings')
+        .select('id, title_sl, title_en, slug, teaching_date, teacher_id, series_name_sl, series_name_en, summary_sl, summary_en, notes_sl, notes_en, transcript_sl, transcript_en, bible_book_code, chapter_start, chapter_end, verse_start, verse_end, media_type, youtube_url, youtube_video_id, audio_url, audio_path, google_drive_file_id, duration_text, thumbnail_url, thumbnail_path, published, featured, created_at, updated_at')
+        .eq('id', teachingId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (alive) {
+            if (data) setSingleTeaching(data as Teaching);
+            setLoadingSingle(false);
+          }
+        });
+      return () => { alive = false; };
+    }
+  }, [baseTeaching, teachingId]);
+
+  // On-demand fetch of heavy text columns (notes & transcripts) if not already loaded
+  useEffect(() => {
+    if (!teachingId) return;
+    if (teaching?.transcript_sl !== undefined || teaching?.notes_sl !== undefined) {
+      return;
+    }
+    let alive = true;
+    supabase
+      .from('teachings')
+      .select('notes_sl, notes_en, transcript_sl, transcript_en')
+      .eq('id', teachingId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (alive && data) {
+          setDetailData(data);
+        }
+      });
+    return () => { alive = false; };
+  }, [teachingId, teaching]);
+
   const teacher = teaching ? teachers.find(tr => tr.id === teaching.teacher_id) : null;
   const book = teaching ? BIBLE_BOOKS_MAP[teaching.bible_book_code] : null;
 
   if (!teaching) {
+    if (loadingSingle) {
+      return (
+        <div className="text-center py-20 flex justify-center items-center">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        </div>
+      );
+    }
     return (
       <div id="teaching-not-found" className="text-center py-20 bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
         <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
@@ -48,13 +106,19 @@ export function PublicDetail({ currentLang, teachingId, teachers, teachings, onN
   const displaySeries = (currentLang === 'en' && teaching.series_name_en) ? teaching.series_name_en : teaching.series_name_sl;
   
   const rawSummary = (currentLang === 'en' && teaching.summary_en) ? teaching.summary_en : teaching.summary_sl;
-  const rawNotes = (currentLang === 'en' && teaching.notes_en) ? teaching.notes_en : teaching.notes_sl;
-  const rawTranscript = (currentLang === 'en' && teaching.transcript_en) ? teaching.transcript_en : teaching.transcript_sl;
+
+  const notesSl = detailData?.notes_sl ?? teaching.notes_sl ?? '';
+  const notesEn = detailData?.notes_en ?? teaching.notes_en ?? '';
+  const transcriptSl = detailData?.transcript_sl ?? teaching.transcript_sl ?? '';
+  const transcriptEn = detailData?.transcript_en ?? teaching.transcript_en ?? '';
+
+  const rawNotes = (currentLang === 'en' && notesEn) ? notesEn : notesSl;
+  const rawTranscript = (currentLang === 'en' && transcriptEn) ? transcriptEn : transcriptSl;
 
   // Render warnings if fallbacks are applied
   const isSummaryFallback = currentLang === 'en' && teaching.summary_sl && !teaching.summary_en;
-  const isNotesFallback = currentLang === 'en' && teaching.notes_sl && !teaching.notes_en;
-  const isTranscriptFallback = currentLang === 'en' && teaching.transcript_sl && !teaching.transcript_en;
+  const isNotesFallback = currentLang === 'en' && notesSl && !notesEn;
+  const isTranscriptFallback = currentLang === 'en' && transcriptSl && !transcriptEn;
 
   // Format bible chapter/verse reference text
   const formattedRef = book 
