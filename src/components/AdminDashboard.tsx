@@ -19,6 +19,7 @@ import { slugify, computeSuggestedMatches, parseMediaTitle } from "../utils";
 import { sendResendEmail, buildNewTeachingEmailHtml } from "../services/emailService";
 import { getAudioUrl, getMediaUrl } from "../lib/cdn";
 import { optimizeImageToDataUrl, optimizeImageFile, createCleanStoragePath } from "../lib/imageOptimizer";
+import { uploadMedia } from "../lib/storage";
 
 interface AdminDashboardProps {
   currentLang: 'sl' | 'en';
@@ -1757,12 +1758,13 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
                           const file = e.target.files?.[0];
                           if (!file) return;
                           try {
-                            const optimized = await optimizeImageToDataUrl(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1920, mimeType: 'image/webp' });
-                            const cleanPath = createCleanStoragePath('sermons', file.name, 'webp');
-                            setEditingTeaching({ ...editingTeaching, thumbnail_url: optimized, thumbnail_path: cleanPath });
+                            const localPreview = URL.createObjectURL(file);
+                            setEditingTeaching({ ...editingTeaching, thumbnail_url: localPreview });
+                            const r2Path = await uploadMedia(file, 'sermons');
+                            setEditingTeaching(prev => ({ ...prev, thumbnail_url: r2Path, thumbnail_path: r2Path }));
                             setTeachingFormHasChanges(true);
                           } catch (err) {
-                            console.error('Image compression error:', err);
+                            console.error('Image upload error:', err);
                           }
                         }}
                       />
@@ -2071,12 +2073,13 @@ export function AdminDashboard({ currentLang, teachers, teachings, onRefreshData
                           const file = e.target.files?.[0];
                           if (!file) return;
                           try {
-                            const optimized = await optimizeImageToDataUrl(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1920, mimeType: 'image/webp' });
-                            const cleanPath = createCleanStoragePath('teachers', file.name, 'webp');
-                            setEditingTeacher({ ...editingTeacher, photo_url: optimized, photo_path: cleanPath });
+                            const localPreview = URL.createObjectURL(file);
+                            setEditingTeacher({ ...editingTeacher, photo_url: localPreview });
+                            const r2Path = await uploadMedia(file, 'teachers');
+                            setEditingTeacher(prev => ({ ...prev, photo_url: r2Path, photo_path: r2Path }));
                             setTeacherFormHasChanges(true);
                           } catch (err) {
-                            console.error('Image compression error:', err);
+                            console.error('Image upload error:', err);
                           }
                         }}
                       />

@@ -3,8 +3,10 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo-icon.svg',
-  '/KCK-logo-rdec_small.png'
+  '/kck-logo-rdec-sekundaren.png',
+  '/KCK-logo-rdec-sekundaren_small.png',
+  '/KCK-logo-rdec_small.png',
+  '/pwa-192x192.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -74,7 +76,7 @@ self.addEventListener('fetch', (event) => {
         const responseToCache = networkResponse.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
         return networkResponse;
-      }).catch(() => caches.match('/logo-icon.svg'));
+      }).catch(() => caches.match('/kck-logo-rdec-sekundaren.png'));
     })
   );
 });

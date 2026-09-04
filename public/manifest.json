@@ -4,14 +4,15 @@
   "description": "Zvočni in video posnetki pridig ter učenja Krščanske cerkve Kalvarija Celje",
   "icons": [
     {
-      "src": "/logo-icon.svg",
-      "type": "image/svg+xml",
-      "sizes": "192x192 512x512 any"
+      "src": "/pwa-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
     },
     {
-      "src": "/KCK-logo-rdec_small.png",
+      "src": "/pwa-512x512.png",
       "type": "image/png",
-      "sizes": "192x192 512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "/",
